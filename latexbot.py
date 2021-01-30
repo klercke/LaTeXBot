@@ -12,19 +12,20 @@ from dotenv import load_dotenv      #
 from discord.ext import commands    #
 from discord.ext import tasks       #
 import logging                      #
-import time
+import time                         #
+from sympy import preview           #
                                     #
 #####################################
 
 
-#################################################
-                                                #
-ACTIVITY = discord.Game("$Typesetting Time$")   #
-LOG_LEVEL = logging.INFO                        #
-COMMAND_PREFIX = '!'                            #
-VERSION = "v0.0.1-alpha"                        #
-                                                #
-#################################################
+#################################
+                                #
+ACTIVITY = discord.Game("tex!") #
+LOG_LEVEL = logging.INFO        #
+COMMAND_PREFIX = 'tex!'         #
+VERSION = "v0.0.1-alpha"        #
+                                #
+#################################
 
 
 # Initialize bot object to use the COMMAND_PREFIX defined above
@@ -89,7 +90,40 @@ async def on_error(event, *args, **kwargs):
 
 @bot.event
 async def on_message(message):
-    print(message.content)
+    if message.author == bot.user:
+        return
+
+    if not message.content:
+        return
+
+    await bot.process_commands(message)
+
+
+
+@bot.command(name="c", help="Takes the first code block and interprets it as LaTeX code, responding with a png of the output")
+async def compile(ctx):
+    if not os.path.isdir('tmp'):
+        logging.info("tmp/ not found, making it now")
+        os.mkdir('tmp')
+
+    if not "```" in ctx.message.content:
+        return
+    tmp = ctx.message.content[ctx.message.content.find('`') + 3:]
+    if not "```" in tmp:
+        return
+
+    user_input = ctx.message.content
+    user_input = user_input[user_input.find('`') + 3:]
+    user_input = user_input[:user_input.find('`')]
+
+    with ctx.channel.typing():
+
+        filename = 'tmp/' + time.strftime('%Y%m%d-%H%M%S') + '.png'
+        preview(user_input, viewer='file', filename=filename, euler=False)
+
+        await ctx.message.channel.send(file = discord.File(filename), reference = ctx.message)
+
+    return
 
 
 def main():
